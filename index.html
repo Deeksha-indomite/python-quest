@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Quest — Learn Python by Playing</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #0d0d1a;
+  --surface: #13132a;
+  --card: #1a1a35;
+  --border: #2a2a50;
+  --accent: #00ff88;
+  --accent2: #ff6b35;
+  --accent3: #7b61ff;
+  --yellow: #ffd700;
+  --cyan: #00e5ff;
+  --text: #e8e8ff;
+  --muted: #6666aa;
+  --pixel: 'Press Start 2P', monospace;
+  --body: 'Rajdhani', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Stars background */
+.stars {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.star {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: #fff;
+  border-radius: 50%;
+  animation: twinkle var(--d) ease-in-out infinite alternate;
+}
+@keyframes twinkle { from { opacity: 0.1; } to { opacity: 0.8; } }
+
+/* HUD TOP BAR */
+.hud {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(13,13,26,0.95);
+  border-bottom: 2px solid var(--border);
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  backdrop-filter: blur(10px);
+}
+.hud-logo {
+  font-family: var(--pixel);
+  font-size: 0.6rem;
+  color: var(--accent);
+  text-shadow: 0 0 10px var(--accent);
+  white-space: nowrap;
+}
+.hud-stats {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  flex: 1;
+  flex-wrap: wrap;
+}
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.8rem;
+  border-radius: 2px;
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  white-space: nowrap;
+}
+.stat-pill .val { color: var(--yellow); }
+.stat-pill.xp .val { color: var(--accent); }
+.stat-pill.streak .val { color: var(--accent2); }
+
+/* XP BAR */
+.xp-bar-wrap {
+  flex: 1;
+  min-width: 120px;
+  max-width: 200px;
+}
+.xp-bar-label {
+  font-family: var(--pixel);
+  font-size: 0.4rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+  display: flex;
+  justify-content: space-between;
+}
+.xp-bar-track {
+  height: 8px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--cyan));
+  transition: width 0.5s ease;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* MAIN LAYOUT */
+.main {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.2rem 4rem;
+}
+
+/* SCREEN MANAGEMENT */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* WELCOME SCREEN */
+.welcome-hero {
+  text-align: center;
+  padding: 3rem 1rem 2rem;
+}
+.pixel-title {
+  font-family: var(--pixel);
+  font-size: clamp(1rem, 4vw, 1.8rem);
+  color: var(--accent);
+  text-shadow: 0 0 20px var(--accent), 4px 4px 0 rgba(0,255,136,0.2);
+  line-height: 1.8;
+  margin-bottom: 0.5rem;
+}
+.pixel-sub {
+  font-family: var(--pixel);
+  font-size: clamp(0.45rem, 2vw, 0.6rem);
+  color: var(--muted);
+  line-height: 2;
+  margin-bottom: 2rem;
+}
+.start-btn {
+  font-family: var(--pixel);
+  font-size: 0.65rem;
+  padding: 1rem 2rem;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.1s;
+  box-shadow: 4px 4px 0 rgba(0,255,136,0.3);
+}
+.start-btn:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 rgba(0,255,136,0.3); }
+.start-btn:active { transform: translate(2px,2px); box-shadow: 2px 2px 0 rgba(0,255,136,0.3); }
+
+/* CHARACTER SELECT */
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.char-card {
+  background: var(--card);
+  border: 2px solid var(--border);
+  padding: 1.5rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.char-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+.char-card.selected { border-color: var(--accent); background: rgba(0,255,136,0.08); }
+.char-card.selected::after {
+  content: '✓ CHOSEN';
+  font-family: var(--pixel);
+  font-size: 0.4rem;
+  color: var(--accent);
+  position: absolute;
+  top: 0.5rem; right: 0.5rem;
+}
+.char-emoji { font-size: 3rem; margin-bottom: 0.8rem; display: block; }
+.char-name {
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+.char-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+
+/* WORLD MAP */
+.world-title {
+  font-family: var(--pixel);
+  font-size: 0.7rem;
+  color: var(--yellow);
+  text-align: center;
+  margin-bottom: 2rem;
+  text-shadow: 0 0 10px var(--yellow);
+}
+.world-map {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.world-zone {
+  background: var(--card);
+  border: 2px solid var(--border);
+  padding: 1.2rem 1.5rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.world-zone::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--zone-color, var(--muted));
+}
+.world-zone:hover:not(.locked) { border-color: var(--zone-color, var(--accent)); transform: translateX(4px); }
+.world-zone.locked { opacity: 0.4; cursor: not-allowed; }
+.world-zone.completed { border-color: var(--accent); }
+.zone-icon { font-size: 2rem; }
+.zone-info h3 {
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+.zone-info p { font-size: 0.85rem; color: var(--muted); }
+.zone-badge {
+  font-family: var(--pixel);
+  font-size: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.badge-done { background: rgba(0,255,136,0.15); color: var(--accent); }
+.badge-locked { background: rgba(102,102,170,0.15); color: var(--muted); }
+.badge-available { background: rgba(255,215,0,0.15); color: var(--yellow); animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* LESSON SCREEN */
+.lesson-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.back-btn {
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  padding: 0.5rem 0.8rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+}
+.back-btn:hover { border-color: var(--text); color: var(--text); }
+.lesson-title {
+  font-family: var(--pixel);
+  font-size: 0.7rem;
+  color: var(--cyan);
+}
+
+/* LESSON CONTENT */
+.lesson-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  margin-bottom: 1.2rem;
+  position: relative;
+}
+.lesson-card h3 {
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  color: var(--accent2);
+  margin-bottom: 1rem;
+}
+.lesson-card p {
+  font-size: 1rem;
+  color: #ccc;
+  line-height: 1.7;
+  margin-bottom: 0.8rem;
+}
+.code-block {
+  background: #080816;
+  border: 1px solid #2a2a50;
+  border-left: 3px solid var(--accent3);
+  padding: 1rem 1.2rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #e8e8ff;
+  margin: 1rem 0;
+  overflow-x: auto;
+  line-height: 1.8;
+  white-space: pre;
+}
+.code-block .kw { color: #ff79c6; }
+.code-block .fn { color: #50fa7b; }
+.code-block .str { color: #f1fa8c; }
+.code-block .num { color: #bd93f9; }
+.code-block .cmt { color: #6272a4; }
+.code-block .var { color: #8be9fd; }
+
+/* QUIZ */
+.quiz-card {
+  background: var(--card);
+  border: 2px solid var(--accent3);
+  padding: 1.5rem;
+  margin-bottom: 1.2rem;
+}
+.quiz-header {
+  font-family: var(--pixel);
+  font-size: 0.5rem;
+  color: var(--accent3);
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+}
+.quiz-q {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 1.2rem;
+  line-height: 1.5;
+}
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.quiz-opt {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--text);
+  font-family: var(--body);
+  text-align: left;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.quiz-opt:hover:not(:disabled) { border-color: var(--accent3); background: rgba(123,97,255,0.1); }
+.quiz-opt.correct { border-color: var(--accent) !important; background: rgba(0,255,136,0.1) !important; color: var(--accent); }
+.quiz-opt.wrong { border-color: var(--accent2) !important; background: rgba(255,107,53,0.1) !important; color: var(--accent2); }
+.quiz-opt:disabled { cursor: default; }
+.opt-letter {
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border);
+  min-width: 1.5rem;
+  text-align: center;
+}
+.quiz-feedback {
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: none;
+}
+.quiz-feedback.show { display: block; }
+.quiz-feedback.correct-fb { background: rgba(0,255,136,0.08); border-left: 3px solid var(--accent); color: #aaffcc; }
+.quiz-feedback.wrong-fb { background: rgba(255,107,53,0.08); border-left: 3px solid var(--accent2); color: #ffccaa; }
+
+/* CODE CHALLENGE */
+.challenge-card {
+  background: var(--card);
+  border: 2px solid var(--yellow);
+  padding: 1.5rem;
+  margin-bottom: 1.2rem;
+}
+.challenge-header {
+  font-family: var(--pixel);
+  font-size: 0.5rem;
+  color: var(--yellow);
+  margin-bottom: 1rem;
+}
+.challenge-q {
+  font-size: 1rem;
+  color: #fff;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+.code-input {
+  width: 100%;
+  background: #080816;
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  padding: 1rem;
+  resize: vertical;
+  min-height: 100px;
+  outline: none;
+  line-height: 1.8;
+}
+.code-input:focus { border-color: var(--yellow); }
+.check-btn {
+  font-family: var(--pixel);
+  font-size: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  background: var(--yellow);
+  color: #000;
+  border: none;
+  cursor: pointer;
+  margin-top: 0.8rem;
+  transition: all 0.1s;
+}
+.check-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255,215,0,0.3); }
+
+/* NEXT BTN */
+.next-btn {
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  padding: 0.8rem 1.5rem;
+  background: transparent;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  cursor: pointer;
+  display: block;
+  margin: 1.5rem auto 0;
+  transition: all 0.2s;
+}
+.next-btn:hover { background: var(--accent); color: #000; }
+.next-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* XP POPUP */
+.xp-popup {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  font-family: var(--pixel);
+  font-size: 0.7rem;
+  color: var(--accent);
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  padding: 0.5rem 1rem;
+  z-index: 1000;
+  animation: popUp 1.5s ease forwards;
+  pointer-events: none;
+  text-shadow: 0 0 8px var(--accent);
+}
+@keyframes popUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  20% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* PROGRESS DOTS */
+.progress-dots {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+.dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s;
+}
+.dot.done { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.dot.active { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: pulse 1s ease-in-out infinite; }
+
+/* COMPLETION */
+.completion-screen {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+.trophy { font-size: 5rem; margin-bottom: 1rem; animation: bounce 1s ease infinite alternate; }
+@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+.completion-title {
+  font-family: var(--pixel);
+  font-size: clamp(0.7rem, 3vw, 1rem);
+  color: var(--yellow);
+  text-shadow: 0 0 20px var(--yellow);
+  margin-bottom: 0.5rem;
+  line-height: 2;
+}
+.xp-earned {
+  font-family: var(--pixel);
+  font-size: 0.8rem;
+  color: var(--accent);
+  margin: 1rem 0;
+}
+
+/* SECTION HEADER */
+.section-hdr {
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* RESPONSIVE */
+@media (max-width: 500px) {
+  .hud { padding: 0.6rem 1rem; gap: 0.8rem; }
+  .world-zone { grid-template-columns: auto 1fr; }
+  .zone-badge { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<!-- HUD -->
+<div class="hud">
+  <div class="hud-logo">🐍 PYTHON QUEST</div>
+  <div class="hud-stats">
+    <div class="stat-pill xp">⚡ XP <span class="val" id="xp-display">0</span></div>
+    <div class="stat-pill">🏆 LVL <span class="val" id="level-display">1</span></div>
+    <div class="stat-pill streak">🔥 <span class="val" id="streak-display">0</span> streak</div>
+    <div class="xp-bar-wrap">
+      <div class="xp-bar-label">
+        <span>LEVEL PROGRESS</span>
+        <span id="xp-next">0/100</span>
+      </div>
+      <div class="xp-bar-track">
+        <div class="xp-bar-fill" id="xp-bar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREENS -->
+<div class="main">
+
+  <!-- WELCOME -->
+  <div class="screen active" id="screen-welcome">
+    <div class="welcome-hero">
+      <div class="pixel-title">⚔ PYTHON QUEST ⚔</div>
+      <div class="pixel-sub">
+        LEARN PYTHON THE FUN WAY<br>
+        EARN XP · LEVEL UP · MASTER CODE
+      </div>
+      <button class="start-btn" onclick="showScreen('screen-char')">▶ START ADVENTURE</button>
+    </div>
+  </div>
+
+  <!-- CHARACTER SELECT -->
+  <div class="screen" id="screen-char">
+    <div class="section-hdr">// CHOOSE YOUR CODER CLASS</div>
+    <div class="char-grid">
+      <div class="char-card" onclick="selectChar(this,'🧙','The Wizard')">
+        <span class="char-emoji">🧙</span>
+        <div class="char-name">THE WIZARD</div>
+        <div class="char-desc">Loves logic & algorithms. Slow but powerful spells.</div>
+      </div>
+      <div class="char-card" onclick="selectChar(this,'🥷','The Ninja')">
+        <span class="char-emoji">🥷</span>
+        <div class="char-name">THE NINJA</div>
+        <div class="char-desc">Fast coder. Writes clean, minimal code silently.</div>
+      </div>
+      <div class="char-card" onclick="selectChar(this,'🤖','The Builder')">
+        <span class="char-emoji">🤖</span>
+        <div class="char-name">THE BUILDER</div>
+        <div class="char-desc">Ships projects. Learns by doing, not just reading.</div>
+      </div>
+    </div>
+    <button class="next-btn" id="char-next" onclick="showScreen('screen-map')" disabled>ENTER THE WORLD →</button>
+  </div>
+
+  <!-- WORLD MAP -->
+  <div class="screen" id="screen-map">
+    <div class="world-title">⚔ WORLD MAP ⚔</div>
+    <div class="world-map" id="world-map"></div>
+  </div>
+
+  <!-- LESSON -->
+  <div class="screen" id="screen-lesson">
+    <div class="lesson-header">
+      <button class="back-btn" onclick="showScreen('screen-map')">← MAP</button>
+      <div class="lesson-title" id="lesson-title">ZONE 1</div>
+    </div>
+    <div class="progress-dots" id="progress-dots"></div>
+    <div id="lesson-content"></div>
+  </div>
+
+  <!-- COMPLETION -->
+  <div class="screen" id="screen-complete">
+    <div class="completion-screen">
+      <div class="trophy">🏆</div>
+      <div class="completion-title">ZONE COMPLETE!</div>
+      <div class="xp-earned" id="xp-earned-text">+50 XP EARNED</div>
+      <p style="color:var(--muted);font-size:0.95rem;margin-bottom:2rem;">Keep going — the next zone awaits!</p>
+      <button class="start-btn" onclick="showScreen('screen-map')">← BACK TO MAP</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ========================
+// GAME STATE
+// ========================
+const state = {
+  xp: 0, level: 1, streak: 0,
+  char: null,
+  completed: new Set(),
+  currentZone: null,
+  currentStep: 0,
+  stepAnswered: false
+};
+
+const XP_PER_LEVEL = 100;
+const XP_REWARDS = { quiz: 15, challenge: 25, lesson: 10 };
+
+// ========================
+// ZONES / CURRICULUM
+// ========================
+const zones = [
+  {
+    id: 'z1', icon: '🌱', name: 'ZONE 1: VARIABLES & TYPES',
+    desc: 'Data types, variables, type checking',
+    color: '#00ff88',
+    steps: [
+      {
+        type: 'lesson',
+        title: 'What is a Variable?',
+        content: `A variable is a <b>named container</b> that stores a value in memory. In Python, you don't need to declare a type — just assign and go.`,
+        code: `<span class="var">name</span> = <span class="str">"Deeksha"</span>     <span class="cmt"># str</span>
+<span class="var">age</span>  = <span class="num">20</span>             <span class="cmt"># int</span>
+<span class="var">gpa</span>  = <span class="num">8.5</span>            <span class="cmt"># float</span>
+<span class="var">is_selected</span> = <span class="kw">True</span>  <span class="cmt"># bool</span>
+<span class="var">nothing</span> = <span class="kw">None</span>       <span class="cmt"># NoneType</span>
+
+<span class="fn">print</span>(<span class="fn">type</span>(<span class="var">name</span>))   <span class="cmt"># &lt;class 'str'&gt;</span>
+<span class="fn">print</span>(<span class="fn">type</span>(<span class="var">age</span>))    <span class="cmt"># &lt;class 'int'&gt;</span>`
+      },
+      {
+        type: 'quiz',
+        question: 'What will `type(3.14)` return in Python?',
+        options: ["<class 'int'>", "<class 'float'>", "<class 'double'>", "<class 'number'>"],
+        correct: 1,
+        feedback: "✅ Correct! 3.14 is a float — Python's decimal number type. There's no 'double' in Python like in Java/C++."
+      },
+      {
+        type: 'lesson',
+        title: 'f-Strings — The Right Way to Print',
+        content: `f-strings let you embed variables directly inside strings. Always use them instead of + concatenation.`,
+        code: `<span class="var">name</span> = <span class="str">"Deeksha"</span>
+<span class="var">course</span> = <span class="str">"Robotics & AI"</span>
+<span class="var">year</span> = <span class="num">1</span>
+
+<span class="cmt"># ❌ Old bad way:</span>
+<span class="fn">print</span>(<span class="str">"Hello "</span> + <span class="var">name</span> + <span class="str">" year "</span> + <span class="fn">str</span>(<span class="var">year</span>))
+
+<span class="cmt"># ✅ f-string way:</span>
+<span class="fn">print</span>(<span class="str">f"Hello <span class="var">{name}</span>, Year <span class="var">{year}</span> of <span class="var">{course}</span>"</span>)
+
+<span class="cmt"># You can put expressions inside too:</span>
+<span class="fn">print</span>(<span class="str">f"Next year: Year <span class="var">{year + 1}</span>"</span>)`
+      },
+      {
+        type: 'challenge',
+        question: 'Write a variable called `city` with value "Chennai", then print: "I am from Chennai" using an f-string.',
+        answer_check: (ans) => ans.includes('city') && ans.includes('Chennai') && ans.includes('f"') || ans.includes("f'"),
+        hint: 'city = "Chennai"\nprint(f"I am from {city}")'
+      },
+      {
+        type: 'quiz',
+        question: 'What does `None` represent in Python?',
+        options: ['The number zero', 'An empty string ""', 'The absence of a value', 'A boolean False'],
+        correct: 2,
+        feedback: '✅ None is Python\'s way of representing "no value" or "nothing". It\'s its own type: NoneType.
