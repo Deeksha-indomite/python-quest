@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Quest — Learn Python by Playing</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #0d0d1a;
+  --surface: #13132a;
+  --card: #1a1a35;
+  --border: #2a2a50;
+  --accent: #00ff88;
+  --accent2: #ff6b35;
+  --accent3: #7b61ff;
+  --yellow: #ffd700;
+  --cyan: #00e5ff;
+  --text: #e8e8ff;
+  --muted: #6666aa;
+  --pixel: 'Press Start 2P', monospace;
+  --body: 'Rajdhani', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Stars background */
+.stars {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.star {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: #fff;
+  border-radius: 50%;
+  animation: twinkle var(--d) ease-in-out infinite alternate;
+}
+@keyframes twinkle { from { opacity: 0.1; } to { opacity: 0.8; } }
+
+/* HUD TOP BAR */
+.hud {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(13,13,26,0.95);
+  border-bottom: 2px solid var(--border);
+  padding: 0.8rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  backdrop-filter: blur(10px);
+}
+.hud-logo {
+  font-family: var(--pixel);
+  font-size: 0.6rem;
+  color: var(--accent);
+  text-shadow: 0 0 10px var(--accent);
+  white-space: nowrap;
+}
+.hud-stats {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  flex: 1;
+  flex-wrap: wrap;
+}
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.8rem;
+  border-radius: 2px;
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  white-space: nowrap;
+}
+.stat-pill .val { color: var(--yellow); }
+.stat-pill.xp .val { color: var(--accent); }
+.stat-pill.streak .val { color: var(--accent2); }
+
+/* XP BAR */
+.xp-bar-wrap {
+  flex: 1;
+  min-width: 120px;
+  max-width: 200px;
+}
+.xp-bar-label {
+  font-family: var(--pixel);
+  font-size: 0.4rem;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+  display: flex;
+  justify-content: space-between;
+}
+.xp-bar-track {
+  height: 8px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--cyan));
+  transition: width 0.5s ease;
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* MAIN LAYOUT */
+.main {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.2rem 4rem;
+}
+
+/* SCREEN MANAGEMENT */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* WELCOME SCREEN */
+.welcome-hero {
+  text-align: center;
+  padding: 3rem 1rem 2rem;
+}
+.pixel-title {
+  font-family: var(--pixel);
+  font-size: clamp(1rem, 4vw, 1.8rem);
+  color: var(--accent);
+  text-shadow: 0 0 20px var(--accent), 4px 4px 0 rgba(0,255,136,0.2);
+  line-height: 1.8;
+  margin-bottom: 0.5rem;
+}
+.pixel-sub {
+  font-family: var(--pixel);
+  font-size: clamp(0.45rem, 2vw, 0.6rem);
+  color: var(--muted);
+  line-height: 2;
+  margin-bottom: 2rem;
+}
+.start-btn {
+  font-family: var(--pixel);
+  font-size: 0.65rem;
+  padding: 1rem 2rem;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.1s;
+  box-shadow: 4px 4px 0 rgba(0,255,136,0.3);
+}
+.start-btn:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 rgba(0,255,136,0.3); }
+.start-btn:active { transform: translate(2px,2px); box-shadow: 2px 2px 0 rgba(0,255,136,0.3); }
+
+/* CHARACTER SELECT */
+.char-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.char-card {
+  background: var(--card);
+  border: 2px solid var(--border);
+  padding: 1.5rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.char-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+.char-card.selected { border-color: var(--accent); background: rgba(0,255,136,0.08); }
+.char-card.selected::after {
+  content: '✓ CHOSEN';
+  font-family: var(--pixel);
+  font-size: 0.4rem;
+  color: var(--accent);
+  position: absolute;
+  top: 0.5rem; right: 0.5rem;
+}
+.char-emoji { font-size: 3rem; margin-bottom: 0.8rem; display: block; }
+.char-name {
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+.char-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+
+/* WORLD MAP */
+.world-title {
+  font-family: var(--pixel);
+  font-size: 0.7rem;
+  color: var(--yellow);
+  text-align: center;
+  margin-bottom: 2rem;
+  text-shadow: 0 0 10px var(--yellow);
+}
+.world-map {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.world-zone {
+  background: var(--card);
+  border: 2px solid var(--border);
+  padding: 1.2rem 1.5rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.world-zone::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--zone-color, var(--muted));
+}
+.world-zone:hover:not(.locked) { border-color: var(--zone-color, var(--accent)); transform: translateX(4px); }
+.world-zone.locked { opacity: 0.4; cursor: not-allowed; }
+.world-zone.completed { border-color: var(--accent); }
+.zone-icon { font-size: 2rem; }
+.zone-info h3 {
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+.zone-info p { font-size: 0.85rem; color: var(--muted); }
+.zone-badge {
+  font-family: var(--pixel);
+  font-size: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+.badge-done { background: rgba(0,255,136,0.15); color: var(--accent); }
+.badge-locked { background: rgba(102,102,170,0.15); color: var(--muted); }
+.badge-available { background: rgba(255,215,0,0.15); color: var(--yellow); animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* LESSON SCREEN */
+.lesson-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.back-btn {
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  padding: 0.5rem 0.8rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+}
+.back-btn:hover { border-color: var(--text); color: var(--text); }
+.lesson-title {
+  font-family: var(--pixel);
+  font-size: 0.7rem;
+  color: var(--cyan);
+}
+
+/* LESSON CONTENT */
+.lesson-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  margin-bottom: 1.2rem;
+  position: relative;
+}
+.lesson-card h3 {
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  color: var(--accent2);
+  margin-bottom: 1rem;
+}
+.lesson-card p {
+  font-size: 1rem;
+  color: #ccc;
+  line-height: 1.7;
+  margin-bottom: 0.8rem;
+}
+.code-block {
+  background: #080816;
+  border: 1px solid #2a2a50;
+  border-left: 3px solid var(--accent3);
+  padding: 1rem 1.2rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #e8e8ff;
+  margin: 1rem 0;
+  overflow-x: auto;
+  line-height: 1.8;
+  white-space: pre;
+}
+.code-block .kw { color: #ff79c6; }
+.code-block .fn { color: #50fa7b; }
+.code-block .str { color: #f1fa8c; }
+.code-block .num { color: #bd93f9; }
+.code-block .cmt { color: #6272a4; }
+.code-block .var { color: #8be9fd; }
+
+/* QUIZ */
+.quiz-card {
+  background: var(--card);
+  border: 2px solid var(--accent3);
+  padding: 1.5rem;
+  margin-bottom: 1.2rem;
+}
+.quiz-header {
+  font-family: var(--pixel);
+  font-size: 0.5rem;
+  color: var(--accent3);
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+}
+.quiz-q {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 1.2rem;
+  line-height: 1.5;
+}
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.quiz-opt {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--text);
+  font-family: var(--body);
+  text-align: left;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.quiz-opt:hover:not(:disabled) { border-color: var(--accent3); background: rgba(123,97,255,0.1); }
+.quiz-opt.correct { border-color: var(--accent) !important; background: rgba(0,255,136,0.1) !important; color: var(--accent); }
+.quiz-opt.wrong { border-color: var(--accent2) !important; background: rgba(255,107,53,0.1) !important; color: var(--accent2); }
+.quiz-opt:disabled { cursor: default; }
+.opt-letter {
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border);
+  min-width: 1.5rem;
+  text-align: center;
+}
+.quiz-feedback {
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: none;
+}
+.quiz-feedback.show { display: block; }
+.quiz-feedback.correct-fb { background: rgba(0,255,136,0.08); border-left: 3px solid var(--accent); color: #aaffcc; }
+.quiz-feedback.wrong-fb { background: rgba(255,107,53,0.08); border-left: 3px solid var(--accent2); color: #ffccaa; }
+
+/* CODE CHALLENGE */
+.challenge-card {
+  background: var(--card);
+  border: 2px solid var(--yellow);
+  padding: 1.5rem;
+  margin-bottom: 1.2rem;
+}
+.challenge-header {
+  font-family: var(--pixel);
+  font-size: 0.5rem;
+  color: var(--yellow);
+  margin-bottom: 1rem;
+}
+.challenge-q {
+  font-size: 1rem;
+  color: #fff;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+.code-input {
+  width: 100%;
+  background: #080816;
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  padding: 1rem;
+  resize: vertical;
+  min-height: 100px;
+  outline: none;
+  line-height: 1.8;
+}
+.code-input:focus { border-color: var(--yellow); }
+.check-btn {
+  font-family: var(--pixel);
+  font-size: 0.5rem;
+  padding: 0.7rem 1.2rem;
+  background: var(--yellow);
+  color: #000;
+  border: none;
+  cursor: pointer;
+  margin-top: 0.8rem;
+  transition: all 0.1s;
+}
+.check-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255,215,0,0.3); }
+
+/* NEXT BTN */
+.next-btn {
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  padding: 0.8rem 1.5rem;
+  background: transparent;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  cursor: pointer;
+  display: block;
+  margin: 1.5rem auto 0;
+  transition: all 0.2s;
+}
+.next-btn:hover { background: var(--accent); color: #000; }
+.next-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* XP POPUP */
+.xp-popup {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  font-family: var(--pixel);
+  font-size: 0.7rem;
+  color: var(--accent);
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  padding: 0.5rem 1rem;
+  z-index: 1000;
+  animation: popUp 1.5s ease forwards;
+  pointer-events: none;
+  text-shadow: 0 0 8px var(--accent);
+}
+@keyframes popUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  20% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* PROGRESS DOTS */
+.progress-dots {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+.dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s;
+}
+.dot.done { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.dot.active { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: pulse 1s ease-in-out infinite; }
+
+/* COMPLETION */
+.completion-screen {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+.trophy { font-size: 5rem; margin-bottom: 1rem; animation: bounce 1s ease infinite alternate; }
+@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-10px); } }
+.completion-title {
+  font-family: var(--pixel);
+  font-size: clamp(0.7rem, 3vw, 1rem);
+  color: var(--yellow);
+  text-shadow: 0 0 20px var(--yellow);
+  margin-bottom: 0.5rem;
+  line-height: 2;
+}
+.xp-earned {
+  font-family: var(--pixel);
+  font-size: 0.8rem;
+  color: var(--accent);
+  margin: 1rem 0;
+}
+
+/* SECTION HEADER */
+.section-hdr {
+  font-family: var(--pixel);
+  font-size: 0.55rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* RESPONSIVE */
+@media (max-width: 500px) {
+  .hud { padding: 0.6rem 1rem; gap: 0.8rem; }
+  .world-zone { grid-template-columns: auto 1fr; }
+  .zone-badge { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<!-- HUD -->
+<div class="hud">
+  <div class="hud-logo">🐍 PYTHON QUEST</div>
+  <div class="hud-stats">
+    <div class="stat-pill xp">⚡ XP <span class="val" id="xp-display">0</span></div>
+    <div class="stat-pill">🏆 LVL <span class="val" id="level-display">1</span></div>
+    <div class="stat-pill streak">🔥 <span class="val" id="streak-display">0</span> streak</div>
+    <div class="xp-bar-wrap">
+      <div class="xp-bar-label">
+        <span>LEVEL PROGRESS</span>
+        <span id="xp-next">0/100</span>
+      </div>
+      <div class="xp-bar-track">
+        <div class="xp-bar-fill" id="xp-bar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREENS -->
+<div class="main">
+
+  <!-- WELCOME -->
+  <div class="screen active" id="screen-welcome">
+    <div class="welcome-hero">
+      <div class="pixel-title">⚔ PYTHON QUEST ⚔</div>
+      <div class="pixel-sub">
+        LEARN PYTHON THE FUN WAY<br>
+        EARN XP · LEVEL UP · MASTER CODE
+      </div>
+      <button class="start-btn" onclick="showScreen('screen-char')">▶ START ADVENTURE</button>
+    </div>
+  </div>
+
+  <!-- CHARACTER SELECT -->
+  <div class="screen" id="screen-char">
+    <div class="section-hdr">// CHOOSE YOUR CODER CLASS</div>
+    <div class="char-grid">
+      <div class="char-card" onclick="selectChar(this,'🧙','The Wizard')">
+        <span class="char-emoji">🧙</span>
+        <div class="char-name">THE WIZARD</div>
+        <div class="char-desc">Loves logic & algorithms. Slow but powerful spells.</div>
+      </div>
+      <div class="char-card" onclick="selectChar(this,'🥷','The Ninja')">
+        <span class="char-emoji">🥷</span>
+        <div class="char-name">THE NINJA</div>
+        <div class="char-desc">Fast coder. Writes clean, minimal code silently.</div>
+      </div>
+      <div class="char-card" onclick="selectChar(this,'🤖','The Builder')">
+        <span class="char-emoji">🤖</span>
+        <div class="char-name">THE BUILDER</div>
+        <div class="char-desc">Ships projects. Learns by doing, not just reading.</div>
+      </div>
+    </div>
+    <button class="next-btn" id="char-next" onclick="showScreen('screen-map')" disabled>ENTER THE WORLD →</button>
+  </div>
+
+  <!-- WORLD MAP -->
+  <div class="screen" id="screen-map">
+    <div class="world-title">⚔ WORLD MAP ⚔</div>
+    <div class="world-map" id="world-map"></div>
+  </div>
+
+  <!-- LESSON -->
+  <div class="screen" id="screen-lesson">
+    <div class="lesson-header">
+      <button class="back-btn" onclick="showScreen('screen-map')">← MAP</button>
+      <div class="lesson-title" id="lesson-title">ZONE 1</div>
+    </div>
+    <div class="progress-dots" id="progress-dots"></div>
+    <div id="lesson-content"></div>
+  </div>
+
+  <!-- COMPLETION -->
+  <div class="screen" id="screen-complete">
+    <div class="completion-screen">
+      <div class="trophy">🏆</div>
+      <div class="completion-title">ZONE COMPLETE!</div>
+      <div class="xp-earned" id="xp-earned-text">+50 XP EARNED</div>
+      <p style="color:var(--muted);font-size:0.95rem;margin-bottom:2rem;">Keep going — the next zone awaits!</p>
+      <button class="start-btn" onclick="showScreen('screen-map')">← BACK TO MAP</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ========================
+// GAME STATE
+// ========================
+const state = {
+  xp: 0, level: 1, streak: 0,
+  char: null,
+  completed: new Set(),
+  currentZone: null,
+  currentStep: 0,
+  stepAnswered: false
+};
+
+const XP_PER_LEVEL = 100;
+const XP_REWARDS = { quiz: 15, challenge: 25, lesson: 10 };
+
+// ========================
+// ZONES / CURRICULUM
+// ========================
+const zones = [
+  {
+    id: 'z1', icon: '🌱', name: 'ZONE 1: VARIABLES & TYPES',
+    desc: 'Data types, variables, type checking',
+    color: '#00ff88',
+    steps: [
+      {
+        type: 'lesson',
+        title: 'What is a Variable?',
+        content: `A variable is a <b>named container</b> that stores a value in memory. In Python, you don't need to declare a type — just assign and go.`,
+        code: `<span class="var">name</span> = <span class="str">"Deeksha"</span>     <span class="cmt"># str</span>
+<span class="var">age</span>  = <span class="num">20</span>             <span class="cmt"># int</span>
+<span class="var">gpa</span>  = <span class="num">8.5</span>            <span class="cmt"># float</span>
+<span class="var">is_selected</span> = <span class="kw">True</span>  <span class="cmt"># bool</span>
+<span class="var">nothing</span> = <span class="kw">None</span>       <span class="cmt"># NoneType</span>
+
+<span class="fn">print</span>(<span class="fn">type</span>(<span class="var">name</span>))   <span class="cmt"># &lt;class 'str'&gt;</span>
+<span class="fn">print</span>(<span class="fn">type</span>(<span class="var">age</span>))    <span class="cmt"># &lt;class 'int'&gt;</span>`
+      },
+      {
+        type: 'quiz',
+        question: 'What will `type(3.14)` return in Python?',
+        options: ["<class 'int'>", "<class 'float'>", "<class 'double'>", "<class 'number'>"],
+        correct: 1,
+        feedback: "✅ Correct! 3.14 is a float — Python's decimal number type. There's no 'double' in Python like in Java/C++."
+      },
+      {
+        type: 'lesson',
+        title: 'f-Strings — The Right Way to Print',
+        content: `f-strings let you embed variables directly inside strings. Always use them instead of + concatenation.`,
+        code: `<span class="var">name</span> = <span class="str">"Deeksha"</span>
+<span class="var">course</span> = <span class="str">"Robotics & AI"</span>
+<span class="var">year</span> = <span class="num">1</span>
+
+<span class="cmt"># ❌ Old bad way:</span>
+<span class="fn">print</span>(<span class="str">"Hello "</span> + <span class="var">name</span> + <span class="str">" year "</span> + <span class="fn">str</span>(<span class="var">year</span>))
+
+<span class="cmt"># ✅ f-string way:</span>
+<span class="fn">print</span>(<span class="str">f"Hello <span class="var">{name}</span>, Year <span class="var">{year}</span> of <span class="var">{course}</span>"</span>)
+
+<span class="cmt"># You can put expressions inside too:</span>
+<span class="fn">print</span>(<span class="str">f"Next year: Year <span class="var">{year + 1}</span>"</span>)`
+      },
+      {
+        type: 'challenge',
+        question: 'Write a variable called `city` with value "Chennai", then print: "I am from Chennai" using an f-string.',
+        answer_check: (ans) => ans.includes('city') && ans.includes('Chennai') && ans.includes('f"') || ans.includes("f'"),
+        hint: 'city = "Chennai"\nprint(f"I am from {city}")'
+      },
+      {
+        type: 'quiz',
+        question: 'What does `None` represent in Python?',
+        options: ['The number zero', 'An empty string ""', 'The absence of a value', 'A boolean False'],
+        correct: 2,
+        feedback: '✅ None is Python\'s way of representing "no value" or "nothing". It\'s its own type: NoneType. 0 and "" and False are different!'
+      }
+    ]
+  },
+  {
+    id: 'z2', icon: '📋', name: 'ZONE 2: LISTS & LOOPS',
+    desc: 'Lists, indexing, for loops, list comprehension',
+    color: '#7b61ff',
+    steps: [
+      {
+        type: 'lesson',
+        title: 'Lists — Ordered Collections',
+        content: `A list stores multiple values in order. You access items by index, starting from 0. Negative indexes go from the end.`,
+        code: `<span class="var">skills</span> = [<span class="str">"Python"</span>, <span class="str">"AWS"</span>, <span class="str">"AI"</span>, <span class="str">"Robotics"</span>]
+
+<span class="fn">print</span>(<span class="var">skills</span>[<span class="num">0</span>])    <span class="cmt"># Python  (first)</span>
+<span class="fn">print</span>(<span class="var">skills</span>[<span class="num">-1</span>])   <span class="cmt"># Robotics (last)</span>
+<span class="fn">print</span>(<span class="var">skills</span>[<span class="num">1</span>:<span class="num">3</span>])  <span class="cmt"># ['AWS', 'AI']</span>
+<span class="fn">print</span>(<span class="fn">len</span>(<span class="var">skills</span>))  <span class="cmt"># 4</span>
+
+<span class="var">skills</span>.append(<span class="str">"Cloud"</span>)  <span class="cmt"># add to end</span>
+<span class="var">skills</span>.remove(<span class="str">"AWS"</span>)   <span class="cmt"># remove by value</span>`
+      },
+      {
+        type: 'quiz',
+        question: 'Given: nums = [10, 20, 30, 40, 50]\nWhat does nums[-2] return?',
+        options: ['20', '30', '40', '50'],
+        correct: 2,
+        feedback: '✅ nums[-2] is the second from the end = 40. Negative indexing: -1 is last, -2 is second-to-last, and so on.'
+      },
+      {
+        type: 'lesson',
+        title: 'For Loops + enumerate()',
+        content: `Loop through a list with <b>for</b>. Use <b>enumerate()</b> when you need both the index and the value — very common in real code.`,
+        code: `<span class="var">fruits</span> = [<span class="str">"mango"</span>, <span class="str">"apple"</span>, <span class="str">"banana"</span>]
+
+<span class="cmt"># Basic loop</span>
+<span class="kw">for</span> <span class="var">fruit</span> <span class="kw">in</span> <span class="var">fruits</span>:
+    <span class="fn">print</span>(<span class="var">fruit</span>)
+
+<span class="cmt"># With index using enumerate</span>
+<span class="kw">for</span> <span class="var">i</span>, <span class="var">fruit</span> <span class="kw">in</span> <span class="fn">enumerate</span>(<span class="var">fruits</span>):
+    <span class="fn">print</span>(<span class="str">f"<span class="var">{i}</span>: <span class="var">{fruit}</span>"</span>)
+<span class="cmt"># 0: mango</span>
+<span class="cmt"># 1: apple</span>
+<span class="cmt"># 2: banana</span>
+
+<span class="cmt"># range() for number loops</span>
+<span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, <span class="num">6</span>):
+    <span class="fn">print</span>(<span class="var">i</span>)  <span class="cmt"># 1 2 3 4 5</span>`
+      },
+      {
+        type: 'quiz',
+        question: 'What does list comprehension `[x*2 for x in range(4)]` produce?',
+        options: ['[0, 2, 4, 6]', '[2, 4, 6, 8]', '[1, 2, 3, 4]', '[0, 1, 2, 3]'],
+        correct: 0,
+        feedback: '✅ range(4) gives 0,1,2,3. Multiply each by 2 → [0,2,4,6]. List comprehension is one of Python\'s most powerful features!'
+      },
+      {
+        type: 'challenge',
+        question: 'Create a list called `scores` with values [45, 82, 67, 91, 55]. Use a loop to print only scores above 70.',
+        answer_check: (ans) => ans.includes('scores') && ans.includes('for') && (ans.includes('> 70') || ans.includes('>70') || ans.includes('>=71')),
+        hint: 'scores = [45, 82, 67, 91, 55]\nfor s in scores:\n    if s > 70:\n        print(s)'
+      }
+    ]
+  },
+  {
+    id: 'z3', icon: '📖', name: 'ZONE 3: DICTIONARIES',
+    desc: 'Key-value pairs, nested dicts, looping',
+    color: '#ffd700',
+    steps: [
+      {
+        type: 'lesson',
+        title: 'Dictionaries — Key:Value Storage',
+        content: `Dictionaries store data as <b>key:value pairs</b>. They're the most used data structure in Python — APIs, configs, databases all use this pattern.`,
+        code: `<span class="var">student</span> = {
+    <span class="str">"name"</span>: <span class="str">"Deeksha"</span>,
+    <span class="str">"year"</span>: <span class="num">1</span>,
+    <span class="str">"skills"</span>: [<span class="str">"Python"</span>, <span class="str">"AWS"</span>]
+}
+
+<span class="cmt"># Access</span>
+<span class="fn">print</span>(<span class="var">student</span>[<span class="str">"name"</span>])          <span class="cmt"># Deeksha</span>
+<span class="fn">print</span>(<span class="var">student</span>.get(<span class="str">"gpa"</span>, <span class="num">0.0</span>)) <span class="cmt"># 0.0 (safe)</span>
+
+<span class="cmt"># Add / Update</span>
+<span class="var">student</span>[<span class="str">"city"</span>] = <span class="str">"Chennai"</span>
+
+<span class="cmt"># Loop</span>
+<span class="kw">for</span> <span class="var">key</span>, <span class="var">val</span> <span class="kw">in</span> <span class="var">student</span>.items():
+    <span class="fn">print</span>(<span class="str">f"<span class="var">{key}</span> → <span class="var">{val}</span>"</span>)`
+      },
+      {
+        type: 'quiz',
+        question: 'What is the difference between dict["key"] and dict.get("key")?',
+        options: [
+          'No difference, they work the same',
+          'dict["key"] raises KeyError if missing; .get() returns None',
+          '.get() is faster than []',
+          'dict["key"] only works for strings'
+        ],
+        correct: 1,
+        feedback: '✅ Exactly! dict["key"] crashes with KeyError if the key doesn\'t exist. dict.get("key") safely returns None (or a default you provide). Always use .get() when the key might be missing.'
+      },
+      {
+        type: 'challenge',
+        question: 'Create a dict called `profile` with keys: name, age, and college. Then print each key and value using a for loop.',
+        answer_check: (ans) => ans.includes('profile') && ans.includes('for') && ans.includes('items()'),
+        hint: 'profile = {"name": "Deeksha", "age": 20, "college": "VIT"}\nfor key, val in profile.items():\n    print(f"{key}: {val}")'
+      },
+      {
+        type: 'quiz',
+        question: 'How do you safely check if "email" key exists in a dict called `user`?',
+        options: [
+          'if user.has("email")',
+          'if user.exists("email")',
+          'if "email" in user',
+          'if user["email"] != None'
+        ],
+        correct: 2,
+        feedback: '✅ The `in` operator is the Pythonic way to check if a key exists in a dict. Simple, clean, and doesn\'t raise errors.'
+      }
+    ]
+  },
+  {
+    id: 'z4', icon: '⚡', name: 'ZONE 4: FUNCTIONS',
+    desc: 'def, parameters, return, scope',
+    color: '#00e5ff',
+    locked: true,
+    steps: [
+      {
+        type: 'lesson',
+        title: 'Defining Functions',
+        content: `Functions let you <b>reuse code</b>. Define once, call many times. They take inputs (parameters) and give back outputs (return value).`,
+        code: `<span class="kw">def</span> <span class="fn">greet</span>(<span class="var">name</span>, <span class="var">role</span>=<span class="str">"Student"</span>):
+    <span class="kw">return</span> <span class="str">f"Hello {<span class="var">name</span>}, AWS {<span class="var">role</span>}!"</span>
+
+<span class="fn">print</span>(<span class="fn">greet</span>(<span class="str">"Deeksha"</span>))
+<span class="cmt"># Hello Deeksha, AWS Student!</span>
+
+<span class="fn">print</span>(<span class="fn">greet</span>(<span class="str">"Rishi"</span>, <span class="str">"Builder Leader"</span>))
+<span class="cmt"># Hello Rishi, AWS Builder Leader!</span>
+
+<span class="kw">def</span> <span class="fn">add</span>(<span class="var">a</span>, <span class="var">b</span>):
+    <span class="kw">return</span> <span class="var">a</span> + <span class="var">b</span>
+
+<span class="var">result</span> = <span class="fn">add</span>(<span class="num">10</span>, <span class="num">20</span>)
+<span class="fn">print</span>(<span class="var">result</span>)  <span class="cmt"># 30</span>`
+      },
+      {
+        type: 'quiz',
+        question: 'What happens if a function has no `return` statement?',
+        options: [
+          'It causes a SyntaxError',
+          'It returns 0 by default',
+          'It returns None',
+          'It returns an empty string'
+        ],
+        correct: 2,
+        feedback: '✅ Functions without a return statement automatically return None. This is important to remember when you\'re checking function outputs!'
+      },
+      {
+        type: 'challenge',
+        question: 'Write a function called `square` that takes a number and returns its square. Call it with 7 and print the result.',
+        answer_check: (ans) => ans.includes('def square') && ans.includes('return') && (ans.includes('** 2') || ans.includes('**2') || ans.includes('* n') || ans.includes('*n')),
+        hint: 'def square(n):\n    return n ** 2\n\nprint(square(7))  # 49'
+      },
+      {
+        type: 'quiz',
+        question: 'What are "default parameters" in Python functions?',
+        options: [
+          'Parameters that are always required',
+          'Parameters with a preset value used when not provided',
+          'Parameters that only accept integers',
+          'The first parameter of every function'
+        ],
+        correct: 1,
+        feedback: '✅ Default parameters let you call a function without providing every argument. Like `def greet(name, role="Student")` — role has a default of "Student" if you don\'t pass one.'
+      }
+    ]
+  },
+  {
+    id: 'z5', icon: '🏛️', name: 'ZONE 5: OOP — CLASSES',
+    desc: 'Classes, objects, methods, inheritance',
+    color: '#ff6b35',
+    locked: true,
+    steps: [
+      {
+        type: 'lesson',
+        title: 'Classes & Objects',
+        content: `A <b>class</b> is a blueprint. An <b>object</b> is an instance built from it. OOP lets you model real-world things as code with their own data and behavior.`,
+        code: `<span class="kw">class</span> <span class="fn">Student</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="var">self</span>, <span class="var">name</span>, <span class="var">year</span>):
+        <span class="var">self</span>.<span class="var">name</span> = <span class="var">name</span>
+        <span class="var">self</span>.<span class="var">year</span> = <span class="var">year</span>
+        <span class="var">self</span>.<span class="var">skills</span> = []
+
+    <span class="kw">def</span> <span class="fn">add_skill</span>(<span class="var">self</span>, <span class="var">skill</span>):
+        <span class="var">self</span>.<span class="var">skills</span>.append(<span class="var">skill</span>)
+
+    <span class="kw">def</span> <span class="fn">introduce</span>(<span class="var">self</span>):
+        <span class="kw">return</span> <span class="str">f"I'm {<span class="var">self.name</span>}, Year {<span class="var">self.year</span>}"</span>
+
+<span class="var">d</span> = <span class="fn">Student</span>(<span class="str">"Deeksha"</span>, <span class="num">1</span>)
+<span class="var">d</span>.<span class="fn">add_skill</span>(<span class="str">"Python"</span>)
+<span class="fn">print</span>(<span class="var">d</span>.<span class="fn">introduce</span>())  <span class="cmt"># I'm Deeksha, Year 1</span>
+<span class="fn">print</span>(<span class="var">d</span>.<span class="var">skills</span>)        <span class="cmt"># ['Python']</span>`
+      },
+      {
+        type: 'quiz',
+        question: 'What is `self` in a Python class method?',
+        options: [
+          'A keyword that means "this file"',
+          'A reference to the current object instance',
+          'A built-in Python function',
+          'The class name itself'
+        ],
+        correct: 1,
+        feedback: '✅ `self` refers to the specific object calling the method. It lets you access that object\'s own data (self.name, self.skills etc.). It must be the first parameter of every instance method.'
+      },
+      {
+        type: 'challenge',
+        question: 'Write a class called `Dog` with: name attribute, a `bark()` method that returns "Woof! I am {name}". Create an object and call bark().',
+        answer_check: (ans) => ans.includes('class Dog') && ans.includes('def bark') && ans.includes('self'),
+        hint: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n    def bark(self):\n        return f"Woof! I am {self.name}"\n\nd = Dog("Bruno")\nprint(d.bark())'
+      }
+    ]
+  }
+];
+
+// ========================
+// STARS
+// ========================
+function makeStars() {
+  const c = document.getElementById('stars');
+  for(let i=0;i<80;i++){
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;animation-delay:${Math.random()*4}s`;
+    c.appendChild(s);
+  }
+}
+
+// ========================
+// SCREEN MANAGEMENT
+// ========================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ========================
+// CHARACTER
+// ========================
+function selectChar(el, emoji, name) {
+  document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.char = {emoji, name};
+  document.getElementById('char-next').disabled = false;
+}
+
+// ========================
+// WORLD MAP
+// ========================
+function renderMap() {
+  const map = document.getElementById('world-map');
+  map.innerHTML = '';
+
+  // Unlock zone 4 if zones 1-3 done
+  if(['z1','z2','z3'].every(id => state.completed.has(id))) {
+    zones[3].locked = false;
+  }
+  // Unlock zone 5 if zone 4 done
+  if(state.completed.has('z4')) {
+    zones[4].locked = false;
+  }
+
+  zones.forEach(zone => {
+    const done = state.completed.has(zone.id);
+    const locked = zone.locked && !done;
+    const div = document.createElement('div');
+    div.className = `world-zone${locked?' locked':''}${done?' completed':''}`;
+    div.style.setProperty('--zone-color', zone.color);
+    div.innerHTML = `
+      <div class="zone-icon">${zone.icon}</div>
+      <div class="zone-info">
+        <h3>${zone.name}</h3>
+        <p>${zone.desc}</p>
+      </div>
+      <span class="zone-badge ${done?'badge-done':locked?'badge-locked':'badge-available'}">
+        ${done?'✓ DONE':locked?'🔒 LOCKED':'▶ PLAY'}
+      </span>`;
+    if(!locked) div.onclick = () => startZone(zone.id);
+    map.appendChild(div);
+  });
+}
+
+// ========================
+// ZONE / LESSON ENGINE
+// ========================
+function startZone(zoneId) {
+  state.currentZone = zones.find(z => z.id === zoneId);
+  state.currentStep = 0;
+  state.stepAnswered = false;
+  document.getElementById('lesson-title').textContent = state.currentZone.name;
+  buildProgressDots();
+  showScreen('screen-lesson');
+  renderStep();
+}
+
+function buildProgressDots() {
+  const zone = state.currentZone;
+  const el = document.getElementById('progress-dots');
+  el.innerHTML = zone.steps.map((s,i) =>
+    `<div class="dot ${i===0?'active':''}" id="dot-${i}"></div>`
+  ).join('');
+}
+
+function updateDots(step) {
+  document.querySelectorAll('.progress-dots .dot').forEach((d,i) => {
+    d.className = 'dot' + (i<step?' done':(i===step?' active':''));
+  });
+}
+
+function renderStep() {
+  const zone = state.currentZone;
+  const step = zone.steps[state.currentStep];
+  updateDots(state.currentStep);
+  const el = document.getElementById('lesson-content');
+  state.stepAnswered = false;
+
+  if(step.type === 'lesson') {
+    el.innerHTML = `
+      <div class="lesson-card">
+        <h3>📖 ${step.title}</h3>
+        <p>${step.content}</p>
+        ${step.code ? `<div class="code-block">${step.code}</div>` : ''}
+      </div>
+      <button class="next-btn" onclick="nextStep()">GOT IT — NEXT →</button>`;
+    gainXP(XP_REWARDS.lesson, 'lesson read');
+  }
+  else if(step.type === 'quiz') {
+    el.innerHTML = `
+      <div class="quiz-card">
+        <div class="quiz-header">
+          <span>⚡ QUIZ TIME</span>
+          <span>+${XP_REWARDS.quiz} XP for correct</span>
+        </div>
+        <div class="quiz-q">${step.question.replace(/\n/g,'<br>')}</div>
+        <div class="quiz-options">
+          ${step.options.map((o,i)=>`
+            <button class="quiz-opt" onclick="answerQuiz(${i},${step.correct},this)" id="opt-${i}">
+              <span class="opt-letter">${['A','B','C','D'][i]}</span>${o}
+            </button>`).join('')}
+        </div>
+        <div class="quiz-feedback" id="quiz-fb"></div>
+      </div>
+      <button class="next-btn" id="quiz-next" onclick="nextStep()" disabled>NEXT →</button>`;
+  }
+  else if(step.type === 'challenge') {
+    el.innerHTML = `
+      <div class="challenge-card">
+        <div class="challenge-header">⚔ CODE CHALLENGE — +${XP_REWARDS.challenge} XP</div>
+        <div class="challenge-q">${step.question}</div>
+        <textarea class="code-input" id="challenge-input" placeholder="Write your Python code here..."></textarea>
+        <button class="check-btn" onclick="checkChallenge()">▶ CHECK MY CODE</button>
+        <div class="quiz-feedback" id="challenge-fb"></div>
+      </div>
+      <button class="next-btn" id="challenge-next" onclick="nextStep()" disabled>NEXT →</button>`;
+  }
+}
+
+function answerQuiz(chosen, correct, btn) {
+  if(state.stepAnswered) return;
+  state.stepAnswered = true;
+  const opts = document.querySelectorAll('.quiz-opt');
+  opts.forEach(o => o.disabled = true);
+  const fb = document.getElementById('quiz-fb');
+  const next = document.getElementById('quiz-next');
+  const step = state.currentZone.steps[state.currentStep];
+
+  if(chosen === correct) {
+    btn.classList.add('correct');
+    fb.className = 'quiz-feedback correct-fb show';
+    fb.innerHTML = step.feedback || '✅ Correct! Well done.';
+    gainXP(XP_REWARDS.quiz, 'correct answer');
+    state.streak++;
+    updateStreak();
+  } else {
+    btn.classList.add('wrong');
+    opts[correct].classList.add('correct');
+    fb.className = 'quiz-feedback wrong-fb show';
+    fb.innerHTML = `❌ Not quite. The correct answer was <b>${['A','B','C','D'][correct]}</b>. ${step.feedback || ''}`;
+    state.streak = 0;
+    updateStreak();
+  }
+  next.disabled = false;
+}
+
+function checkChallenge() {
+  const input = document.getElementById('challenge-input').value.trim();
+  const step = state.currentZone.steps[state.currentStep];
+  const fb = document.getElementById('challenge-fb');
+  const next = document.getElementById('challenge-next');
+
+  if(!input) {
+    fb.className = 'quiz-feedback wrong-fb show';
+    fb.innerHTML = '❌ Write some code first!';
+    return;
+  }
+
+  if(!state.stepAnswered) {
+    state.stepAnswered = true;
+    if(step.answer_check(input)) {
+      fb.className = 'quiz-feedback correct-fb show';
+      fb.innerHTML = `✅ Looks good! You got it right. +${XP_REWARDS.challenge} XP earned!`;
+      gainXP(XP_REWARDS.challenge, 'challenge solved');
+      state.streak++;
+      updateStreak();
+    } else {
+      fb.className = 'quiz-feedback wrong-fb show';
+      fb.innerHTML = `⚠️ Not quite right. Here's a hint:<br><pre style="margin-top:0.5rem;font-size:0.8rem;color:#aaa">${step.hint}</pre>`;
+      // still allow next
+      gainXP(5, 'attempted');
+    }
+    next.disabled = false;
+  }
+}
+
+function nextStep() {
+  const zone = state.currentZone;
+  if(state.currentStep < zone.steps.length - 1) {
+    state.currentStep++;
+    renderStep();
+  } else {
+    // Zone complete
+    state.completed.add(zone.id);
+    const totalXP = zone.steps.length * 10;
+    document.getElementById('xp-earned-text').textContent = `+${totalXP} XP EARNED — ZONE MASTERED!`;
+    showScreen('screen-complete');
+    renderMap();
+  }
+}
+
+// ========================
+// XP & LEVELING
+// ========================
+function gainXP(amount, reason) {
+  state.xp += amount;
+  updateHUD();
+  showXPPopup(`+${amount} XP`);
+}
+
+function updateHUD() {
+  const lvl = Math.floor(state.xp / XP_PER_LEVEL) + 1;
+  const xpInLevel = state.xp % XP_PER_LEVEL;
+  state.level = lvl;
+  document.getElementById('xp-display').textContent = state.xp;
+  document.getElementById('level-display').textContent = lvl;
+  document.getElementById('xp-next').textContent = `${xpInLevel}/${XP_PER_LEVEL}`;
+  document.getElementById('xp-bar').style.width = (xpInLevel / XP_PER_LEVEL * 100) + '%';
+}
+
+function updateStreak() {
+  document.getElementById('streak-display').textContent = state.streak;
+}
+
+function showXPPopup(text) {
+  const existing = document.querySelector('.xp-popup');
+  if(existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'xp-popup';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1600);
+}
+
+// ========================
+// INIT
+// ========================
+window.onload = function() {
+  makeStars();
+  renderMap();
+};
+</script>
+</body>
+</html>
